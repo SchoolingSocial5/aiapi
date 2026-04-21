@@ -4,7 +4,7 @@
   "description": "Standalone AI Explanation Service",
   "main": "dist/index.js",
   "scripts": {
-    "start": "node dist/index.ts",
+    "start": "npm run build && node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc"
   },
