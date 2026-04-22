@@ -41,6 +41,20 @@ app.post('/explain', async (req: Request, res: Response) => {
   }
 });
 
+app.post('/answer', async (req: Request, res: Response) => {
+  try {
+    const { question, options } = req.body;
+    if (!question || !Array.isArray(options) || options.length === 0) {
+      return res.status(400).json({ message: 'question and options are required' });
+    }
+    const correctIndex = await geminiService.answerQuestion(question, options);
+    res.status(200).json({ correctIndex });
+  } catch (error: any) {
+    const status = error.status || 500;
+    res.status(status).json({ message: error.message || 'Internal server error' });
+  }
+});
+
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
