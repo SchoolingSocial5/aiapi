@@ -122,26 +122,9 @@ Reply with ONLY the number (1, 2, 3, or 4) of the correct option. No explanation
       - Do not include labels like "Explanation:" or "Correct Answer:" in your response.
     `;
 
-    let lastError: any;
-    for (const modelName of FREE_TIER_MODELS) {
-      try {
-        console.log(`[AI] Trying Gemini model: ${modelName}`);
-        const model = this.genAI.getGenerativeModel({ model: modelName });
-        const result = await model.generateContent(prompt);
-        return result.response.text().trim() || 'No explanation generated.';
-      } catch (error: any) {
-        console.error(`[Gemini Error] model=${modelName}`, error.message);
-        lastError = error;
-        if (this.isQuotaError(error)) {
-          continue;
-        }
-        break;
-      }
-    }
-
-    // Gemini quota exhausted — fall back to Groq
-    if (this.isQuotaError(lastError) && GROQ_API_KEY) {
-      console.log('[AI] Gemini quota reached, falling back to Groq for explanation');
+    // Try Groq first (generous free tier)
+    if (GROQ_API_KEY) {
+      console.log('[AI] Trying Groq for explanation first...');
       for (const model of GROQ_MODELS) {
         try {
           const completion = await this.groq.chat.completions.create({
@@ -160,9 +143,27 @@ Reply with ONLY the number (1, 2, 3, or 4) of the correct option. No explanation
       }
     }
 
+    // Fallback to Gemini
+    let lastError: any;
+    for (const modelName of FREE_TIER_MODELS) {
+      try {
+        console.log(`[AI] Falling back to Gemini model: ${modelName}`);
+        const model = this.genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent(prompt);
+        return result.response.text().trim() || 'No explanation generated.';
+      } catch (error: any) {
+        console.error(`[Gemini Error] model=${modelName}`, error.message);
+        lastError = error;
+        if (this.isQuotaError(error)) {
+          continue;
+        }
+        break;
+      }
+    }
+
     if (this.isQuotaError(lastError)) {
       throw Object.assign(new Error('AI quota limit reached. Please try again in a few minutes.'), { status: 429 });
     }
-    throw new Error(lastError?.message || 'Failed to generate explanation from Gemini API.');
+    throw new Error(lastError?.message || 'Failed to generate explanation from AI services.');
   }
 }
